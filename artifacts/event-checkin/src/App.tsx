@@ -9,6 +9,7 @@ import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import QRCode from 'qrcode';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import { PDFDocument } from 'pdf-lib';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -439,8 +440,9 @@ function InvitationGenerator() {
   const [regularCount, setRegularCount] = useState('0');
   const [formError, setFormError] = useState('');
   const [generatedCount, setGeneratedCount] = useState<number | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
     setFormError('');
     setGeneratedCount(null);
@@ -456,25 +458,56 @@ function InvitationGenerator() {
       return;
     }
 
-    generateInvitations.mutate(
-      { data: { vipCount: vip, regularCount: regular } },
-      {
-        onSuccess: (zip) => {
-          const url = URL.createObjectURL(zip);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = 'gatepass-invitations.zip';
-          document.body.appendChild(link);
-          link.click();
-          link.remove();
-          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-          setGeneratedCount(vip + regular);
-        },
-        onError: () => {
-          setFormError('We couldn’t generate the invitations. Check the counts and try again.');
-        },
-      },
-    );
+    setIsGenerating(true);
+    try {
+      const result = await generateInvitations.mutateAsync({ data: { vipCount: vip, regularCount: regular } });
+      const attendees = Array.isArray(result) ? result : [];
+      if (!attendees.length) throw new Error("No attendees returned");
+
+      const [vipTemplateRes, regularTemplateRes] = await Promise.all([
+        fetch('/templates/vip-template.pdf').then(r => r.arrayBuffer()),
+        fetch('/templates/regular-template.pdf').then(r => r.arrayBuffer())
+      ]);
+
+      const zip = new JSZip();
+      const QR_BOX = { x: 364, y: 468.9, size: 180 };
+
+      await Promise.all(attendees.map(async (record, index) => {
+        const templateBytes = record.ticketType === 'VIP' ? vipTemplateRes : regularTemplateRes;
+        const pdf = await PDFDocument.load(templateBytes);
+        
+        const qrDataUrl = await QRCode.toDataURL(record.qrId, {
+          type: 'image/png',
+          margin: 0,
+          width: 600,
+          errorCorrectionLevel: 'M',
+        });
+        
+        const qrImage = await pdf.embedPng(qrDataUrl);
+        const page = pdf.getPages()[0];
+
+        page.drawImage(qrImage, {
+          x: QR_BOX.x,
+          y: QR_BOX.y,
+          width: QR_BOX.size,
+          height: QR_BOX.size,
+        });
+
+        const pdfBytes = await pdf.save();
+        const sequence = String(index + 1).padStart(3, "0");
+        const folder = record.ticketType === "VIP" ? "VIP" : "Regular";
+        zip.folder(folder)?.file(`${sequence}-${record.qrId}.pdf`, pdfBytes);
+      }));
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      saveAs(zipBlob, 'gatepass-invitations.zip');
+      setGeneratedCount(vip + regular);
+    } catch (e) {
+      console.error(e);
+      setFormError('We couldn’t generate the invitations. Check the counts and try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return <main className="mx-auto max-w-5xl p-5 pb-12 sm:p-8 lg:p-12">
@@ -499,10 +532,10 @@ function InvitationGenerator() {
             <span className="mb-2 block text-sm font-bold">How many Regular invitations?</span>
             <input type="number" min="0" step="1" inputMode="numeric" value={regularCount} onChange={(event) => setRegularCount(event.target.value)} className="h-12 w-full rounded-lg border border-input bg-background px-4 text-lg font-bold outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20" data-testid="input-regular-count" />
           </label>
-          {(formError || generateInvitations.isError) && <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive" data-testid="status-generate-error"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{formError || 'We couldn’t generate the invitations. Please try again.'}</span></div>}
+          {formError && <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive" data-testid="status-generate-error"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>{formError || 'We couldn’t generate the invitations. Please try again.'}</span></div>}
           {generatedCount !== null && <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/10 p-3 text-sm text-accent" data-testid="status-generate-success"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /><span>{generatedCount} invitation{generatedCount === 1 ? '' : 's'} generated. Your ZIP download should begin automatically.</span></div>}
-          <Button type="submit" disabled={generateInvitations.isPending} className="w-full bg-primary text-primary-foreground shadow-md shadow-primary/15" data-testid="button-generate-invitations">
-            {generateInvitations.isPending ? 'Preparing ZIP…' : <>Generate and download ZIP <Download className="h-4 w-4" /></>}
+          <Button type="submit" disabled={isGenerating} className="w-full bg-primary text-primary-foreground shadow-md shadow-primary/15" data-testid="button-generate-invitations">
+            {isGenerating ? 'Preparing ZIP…' : <>Generate and download ZIP <Download className="h-4 w-4" /></>}
           </Button>
         </form>
       </section>

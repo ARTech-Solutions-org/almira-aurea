@@ -187,6 +187,15 @@ export const GenerateInvitationsBody = zod.object({
   "regularCount": zod.number().min(generateInvitationsBodyRegularCountMin).multipleOf(generateInvitationsBodyRegularCountMultipleOf)
 })
 
-export const GenerateInvitationsResponse = zod.unknown()
+export const GenerateInvitationsResponseItem = zod.object({
+  "id": zod.number(),
+  "qrId": zod.string(),
+  "name": zod.string(),
+  "email": zod.string().nullish(),
+  "ticketType": zod.string(),
+  "checkedInAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const GenerateInvitationsResponse = zod.array(GenerateInvitationsResponseItem)
 
 

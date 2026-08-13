@@ -222,12 +222,13 @@ paths:
               $ref: "#/components/schemas/GenerateInvitationsInput"
       responses:
         "200":
-          description: ZIP archive containing the generated invitation PDFs
+          description: List of generated attendees
           content:
-            application/zip:
+            application/json:
               schema:
-                type: string
-                format: binary
+                type: array
+                items:
+                  $ref: "#/components/schemas/Attendee"
         "400":
           description: Invalid invitation counts
           content:

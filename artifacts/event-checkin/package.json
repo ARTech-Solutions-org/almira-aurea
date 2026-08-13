@@ -80,6 +80,7 @@
   },
   "dependencies": {
     "file-saver": "^2.0.5",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "pdf-lib": "^1.17.1"
   }
 }

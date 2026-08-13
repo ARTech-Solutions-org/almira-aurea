@@ -745,9 +745,9 @@ export const getGenerateInvitationsUrl = () => {
 /**
  * @summary Generate VIP and Regular invitation PDFs
  */
-export const generateInvitations = async (generateInvitationsInput: GenerateInvitationsInput, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+export const generateInvitations = async (generateInvitationsInput: GenerateInvitationsInput, options?: Parameters<typeof customFetch>[1]): Promise<Attendee[]> => {
 
-  return customFetch<Blob>(getGenerateInvitationsUrl(),
+  return customFetch<Attendee[]>(getGenerateInvitationsUrl(),
   {
     ...options,
     method: 'POST',
