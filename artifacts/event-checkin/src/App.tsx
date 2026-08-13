@@ -183,12 +183,12 @@ function Scanner() {
         return;
       }
 
-      // ── Path 2: ZXing with TRY_HARDER via @zxing/browser ──
+      // ── Path 2: ZXing via @zxing/browser ──
       const hints = new Map<DecodeHintType, any>();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
-      hints.set(DecodeHintType.TRY_HARDER, true);
+      // TRY_HARDER makes JS decoding very slow on iOS; disabled for better framerate.
 
-      const zxing = new BrowserMultiFormatReader(hints);
+      const zxing = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 });
       zxing.decodeFromVideoElement(video, (result, error) => {
         if (!cameraActiveRef.current) return;
         if (result) {
