@@ -242,23 +242,23 @@ function Scanner() {
             </div>
           ) : (
             <div className="scan-result-card rounded-[2rem] p-7 text-center text-[#fff8e9] sm:p-10" data-testid={`scan-result-${isValid ? 'standard' : isDuplicate ? 'duplicate' : 'invalid'}`}>
-              <div className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full ${isValid ? 'bg-[#e5a82d]/15 text-[#f7c85f]' : isDuplicate ? 'bg-[#dca04b]/15 text-[#e9b96d]' : 'bg-red-400/10 text-red-300'}`}>
+              <div className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full ${isValid ? 'bg-[#e5a82d]/15 text-[#f7c85f]' : 'bg-red-400/10 text-red-400'}`}>
                 {isValid ? <CheckCircle2 className="h-11 w-11" /> : isDuplicate ? <AlertCircle className="h-11 w-11" /> : <XCircle className="h-11 w-11" />}
               </div>
-              <p className={`mt-6 font-mono text-[10px] uppercase tracking-[.3em] ${isValid ? 'text-[#e8b84a]' : isDuplicate ? 'text-[#e9b96d]' : 'text-red-300'}`}>
+              <p className={`mt-6 font-mono text-[10px] uppercase tracking-[.3em] ${isValid ? 'text-[#e8b84a]' : 'text-red-400'}`}>
                 {isValid ? 'Entry approved' : isDuplicate ? 'Already checked in' : 'Not found'}
               </p>
-              <h2 className={`mt-3 font-display text-6xl font-semibold tracking-[.02em] ${isValid ? 'text-[#f7c85f]' : isDuplicate ? 'text-[#e9b96d]' : 'text-red-300'}`}>
+              <h2 className={`mt-3 font-display text-6xl font-semibold tracking-[.02em] ${isValid ? 'text-[#f7c85f]' : 'text-red-500'}`}>
                 {isValid ? 'WELCOME' : isDuplicate ? 'ALREADY IN' : 'INVALID'}
               </h2>
               {result.attendee ? (
-                <div className="mt-7 border-y border-[#e5a82d]/20 py-5">
+                <div className="mt-7 border-y border-red-500/20 py-5">
                   <div className="text-2xl font-semibold">{result.attendee.name}</div>
-                  <div className="mt-2 font-mono text-xs uppercase tracking-[.14em] text-[#e8b84a]">{result.attendee.ticketType}</div>
-                  {result.attendee.email && <div className="mt-2 text-xs text-[#fff8e9]/55">{result.attendee.email}</div>}
+                  <div className="mt-2 font-mono text-xs uppercase tracking-[.14em] text-red-300">{result.attendee.ticketType}</div>
+                  {result.attendee.email && <div className="mt-2 text-xs text-red-200/70">{result.attendee.email}</div>}
                 </div>
               ) : <p className="mt-6 text-sm text-red-200/80">{result.message}</p>}
-              <button onClick={resetScan} className={`mt-9 w-full rounded-xl px-8 py-4 text-sm font-extrabold uppercase tracking-[.16em] transition active:scale-[.98] ${isValid ? 'bg-[#e5a82d] text-[#2d1b10] hover:bg-[#f7c85f]' : isDuplicate ? 'bg-[#c78a3f] text-[#2d1b10] hover:bg-[#e9b96d]' : 'bg-red-500/90 text-white hover:bg-red-400'}`} data-testid="button-scan-next">Scan Next</button>
+              <button onClick={resetScan} className={`mt-9 w-full rounded-xl px-8 py-4 text-sm font-extrabold uppercase tracking-[.16em] transition active:scale-[.98] ${isValid ? 'bg-[#e5a82d] text-[#2d1b10] hover:bg-[#f7c85f]' : 'bg-red-600 text-white hover:bg-red-500'}`} data-testid="button-scan-next">Scan Next</button>
             </div>
           )}
         </div>
