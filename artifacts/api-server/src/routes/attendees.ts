@@ -44,7 +44,7 @@ router.post("/attendees/create", async (req, res): Promise<void> => {
   }
   
   const attendeeData = {
-    qrId: parsed.data.qrId?.trim() || `EVT-${randomUUID().slice(0, 8).toUpperCase()}`,
+    qrId: parsed.data.qrId?.trim() || (() => { const u = randomUUID().replace(/-/g, "").toUpperCase(); return `EVT-${u.slice(0, 4)}-${u.slice(4, 7)}`; })(),
     name: parsed.data.name.trim(),
     email: parsed.data.email?.trim() || null,
     ticketType: parsed.data.ticketType.trim(),
@@ -61,7 +61,7 @@ router.post("/attendees/import", async (req, res): Promise<void> => {
     return;
   }
   const values = parsed.data.attendees.map((attendee) => ({
-    qrId: attendee.qrId?.trim() || `EVT-${randomUUID().slice(0, 8).toUpperCase()}`,
+    qrId: attendee.qrId?.trim() || (() => { const u = randomUUID().replace(/-/g, "").toUpperCase(); return `EVT-${u.slice(0, 4)}-${u.slice(4, 7)}`; })(),
     name: attendee.name.trim(),
     email: attendee.email?.trim() || null,
     ticketType: attendee.ticketType.trim(),

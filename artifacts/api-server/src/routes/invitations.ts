@@ -26,11 +26,14 @@ router.post("/invitations/generate", async (req, res): Promise<void> => {
     ...Array.from({ length: vipCount }, () => "vip" as const),
     ...Array.from({ length: regularCount }, () => "regular" as const),
   ];
-  const records = requested.map((type) => ({
-    qrId: `INV-${randomUUID().slice(0, 8).toUpperCase()}`,
-    name: `${type === "vip" ? "VIP" : "Regular"} Invitation`,
-    ticketType: type === "vip" ? "VIP" : "Regular",
-  }));
+  const records = requested.map((type) => {
+    const uuid = randomUUID().replace(/-/g, "").toUpperCase();
+    return {
+      qrId: `INV-${uuid.slice(0, 4)}-${uuid.slice(4, 7)}`,
+      name: `${type === "vip" ? "VIP" : "Regular"} Invitation`,
+      ticketType: type === "vip" ? "VIP" : "Regular",
+    };
+  });
 
   const inserted = await db.insert(attendeesTable).values(records).returning();
 
