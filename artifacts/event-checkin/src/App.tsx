@@ -3,7 +3,7 @@ import type { ButtonHTMLAttributes, FormEvent, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter';
 import { getGetCurrentUserQueryKey, getGetDashboardSummaryQueryKey, getListAttendeesQueryKey, useCheckIn, useGetCurrentUser, useGetDashboardSummary, useImportAttendees, useCreateAttendee, useListAttendees, useLogin, useLogout, useGenerateInvitations } from '@workspace/api-client-react';
-import { AlertCircle, ArrowRight, BarChart3, Check, CheckCircle2, ChevronRight, ClipboardList, Download, FileUp, LogOut, Menu, QrCode, Search, Ticket, Users, X, XCircle } from 'lucide-react';
+import { AlertCircle, ArrowRight, BarChart3, Check, CheckCircle2, ChevronRight, ClipboardList, Crown, Download, FileUp, LogOut, Menu, QrCode, Search, Sparkles, Ticket, Users, X, XCircle } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import QRCode from 'qrcode';
@@ -13,11 +13,11 @@ const queryClient = new QueryClient();
 
 function Logo({ compact = false }: { compact?: boolean }) {
   return <div className="flex items-center gap-3" data-testid="brand-logo">
-    <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+    <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/20">
       <QrCode className="h-5 w-5" strokeWidth={2.5} />
       <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-secondary ring-2 ring-sidebar" />
     </div>
-    {!compact && <div><div className="font-display text-lg font-bold tracking-tight">Gatepass</div><div className="font-mono text-[9px] uppercase tracking-[.2em] text-current/55">event ops</div></div>}
+    {!compact && <div><div className="font-display text-lg font-semibold tracking-[.18em]">ALMIRA</div><div className="font-mono text-[9px] uppercase tracking-[.2em] text-current/55">AUREA / event ops</div></div>}
   </div>;
 }
 
@@ -120,12 +120,12 @@ function Scanner() {
     cameraActiveRef.current = false;
     if (cameraRafRef.current !== null) cancelAnimationFrame(cameraRafRef.current);
     cameraRafRef.current = null;
-    
+
     if (scannerControlsRef.current) {
-        scannerControlsRef.current.stop();
-        scannerControlsRef.current = null;
+      scannerControlsRef.current.stop();
+      scannerControlsRef.current = null;
     }
-    
+
     cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
     cameraStreamRef.current = null;
     if (videoRef.current) {
@@ -145,58 +145,58 @@ function Scanner() {
     cameraStartedRef.current = true;
     cameraActiveRef.current = true;
     try {
-        // iOS Safari is more reliable with a direct environment-facing
-        // constraint after a user tap. Android keeps the existing ideal
-        // constraints and automatic startup below.
-        const videoConstraints = isIosDevice
-          ? { facingMode: 'environment' as const }
-          : {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30 },
-          };
-        const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
-        cameraStreamRef.current = stream;
-        if (!cameraActiveRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
-        video.srcObject = stream;
-        await video.play();
-        if (!cameraActiveRef.current) return;
-        setCameraState('ready');
+      // iOS Safari is more reliable with a direct environment-facing
+      // constraint after a user tap. Android keeps the existing ideal
+      // constraints and automatic startup below.
+      const videoConstraints = isIosDevice
+        ? { facingMode: 'environment' as const }
+        : {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 30 },
+        };
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints });
+      cameraStreamRef.current = stream;
+      if (!cameraActiveRef.current) { stream.getTracks().forEach((track) => track.stop()); return; }
+      video.srcObject = stream;
+      await video.play();
+      if (!cameraActiveRef.current) return;
+      setCameraState('ready');
 
-        // ── Path 1: native BarcodeDetector (Android Chrome — unchanged) ──
-        if ('BarcodeDetector' in window) {
-          const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
-          const loop = async () => {
-            if (!cameraActiveRef.current) return;
-            if (video.readyState >= 2) {
-              try {
-                const codes: any[] = await detector.detect(video);
-                if (codes.length > 0) submitQr(codes[0].rawValue);
-              } catch { /* no code in frame */ }
-            }
-            if (cameraActiveRef.current) cameraRafRef.current = requestAnimationFrame(loop);
-          };
-          cameraRafRef.current = requestAnimationFrame(loop);
-          return;
-        }
-
-        // ── Path 2: ZXing with TRY_HARDER via @zxing/browser ──
-        const hints = new Map<DecodeHintType, any>();
-        hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
-        hints.set(DecodeHintType.TRY_HARDER, true);
-        
-        const zxing = new BrowserMultiFormatReader(hints);
-        zxing.decodeFromVideoElement(video, (result, error) => {
+      // ── Path 1: native BarcodeDetector (Android Chrome — unchanged) ──
+      if ('BarcodeDetector' in window) {
+        const detector = new (window as any).BarcodeDetector({ formats: ['qr_code'] });
+        const loop = async () => {
           if (!cameraActiveRef.current) return;
-          if (result) {
-            submitQr(result.getText());
+          if (video.readyState >= 2) {
+            try {
+              const codes: any[] = await detector.detect(video);
+              if (codes.length > 0) submitQr(codes[0].rawValue);
+            } catch { /* no code in frame */ }
           }
-        }).then((controls) => {
-          scannerControlsRef.current = controls;
-        }).catch(() => {
-          /* ignore initialization errors */
-        });
+          if (cameraActiveRef.current) cameraRafRef.current = requestAnimationFrame(loop);
+        };
+        cameraRafRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      // ── Path 2: ZXing with TRY_HARDER via @zxing/browser ──
+      const hints = new Map<DecodeHintType, any>();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
+
+      const zxing = new BrowserMultiFormatReader(hints);
+      zxing.decodeFromVideoElement(video, (result, error) => {
+        if (!cameraActiveRef.current) return;
+        if (result) {
+          submitQr(result.getText());
+        }
+      }).then((controls) => {
+        scannerControlsRef.current = controls;
+      }).catch(() => {
+        /* ignore initialization errors */
+      });
     } catch {
       cameraStartedRef.current = false;
       if (cameraActiveRef.current) setCameraState('denied');
@@ -212,43 +212,55 @@ function Scanner() {
   const status = result?.status;
   const isValid = status === 'valid';
   const isDuplicate = status === 'duplicate';
+  const isVip = Boolean(result?.attendee?.ticketType?.toLowerCase().includes('vip'));
 
   return (
     <main className="mx-auto max-w-6xl p-5 pb-12 sm:p-8 lg:p-12">
       {/* ── Result fullscreen overlay ── */}
       {result && (
-        <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center p-8 ${isValid ? 'bg-fuchsia-950' : isDuplicate ? 'bg-amber-950' : 'bg-red-950'}`} data-testid="overlay-scan-result">
-          {/* big status icon */}
-          <div className={`flex h-24 w-24 items-center justify-center rounded-full ${isValid ? 'bg-fuchsia-500/20' : isDuplicate ? 'bg-amber-500/20' : 'bg-red-500/20'}`}>
-            {isValid ? <CheckCircle2 className="h-14 w-14 text-fuchsia-400" /> : isDuplicate ? <AlertCircle className="h-14 w-14 text-amber-400" /> : <XCircle className="h-14 w-14 text-red-400" />}
-          </div>
-
-          {/* DONE / label */}
-          <p className={`mt-6 font-mono text-xs uppercase tracking-[.3em] ${isValid ? 'text-fuchsia-500' : isDuplicate ? 'text-amber-500' : 'text-red-500'}`}>
-            {isValid ? 'Entry approved' : isDuplicate ? 'Already checked in' : 'Not found'}
-          </p>
-          <h2 className={`mt-2 font-display text-7xl font-black tracking-tight ${isValid ? 'text-fuchsia-300' : isDuplicate ? 'text-amber-300' : 'text-red-300'}`}>
-            {isValid ? 'DONE ✓' : isDuplicate ? 'DUPE' : 'ERROR'}
-          </h2>
-
-          {/* Attendee info */}
-          {result.attendee && (
-            <div className="mt-8 text-center">
-              <div className={`text-3xl font-bold ${isValid ? 'text-fuchsia-200' : isDuplicate ? 'text-amber-200' : 'text-red-200'}`}>{result.attendee.name}</div>
-              <div className={`mt-2 font-mono text-sm ${isValid ? 'text-fuchsia-400' : isDuplicate ? 'text-amber-400' : 'text-red-400'}`}>{result.attendee.ticketType}</div>
-              {result.attendee.email && <div className={`mt-1 text-sm ${isValid ? 'text-fuchsia-500' : isDuplicate ? 'text-amber-500' : 'text-red-500'}`}>{result.attendee.email}</div>}
+        <div className={`scan-result-overlay fixed inset-0 z-50 flex flex-col items-center justify-center p-5 sm:p-8 ${isVip && isValid ? 'scan-result-vip' : 'almira-surface'}`} data-testid="overlay-scan-result">
+          {isVip && isValid ? (
+            <div className="scan-result-vip-card relative w-full max-w-xl overflow-hidden rounded-[2rem] p-7 text-center text-[#fff8e9] sm:p-12" data-testid="scan-result-vip">
+              <div className="vip-shimmer pointer-events-none absolute inset-0 opacity-20" />
+              <div className="relative">
+                <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-[#e5a82d]/70 bg-[#e5a82d]/15 text-[#f7c85f] shadow-[0_0_36px_rgba(229,168,45,.18)]">
+                  <Crown className="h-10 w-10" strokeWidth={1.4} />
+                </div>
+                <p className="mt-7 font-mono text-[10px] uppercase tracking-[.38em] text-[#e8b84a]">Almira / Aurea Residence</p>
+                <div className="mx-auto mt-3 h-px w-24 bg-[#e5a82d]/60" />
+                <p className="mt-5 text-xs font-semibold uppercase tracking-[.28em] text-[#fff8e9]/70">Exclusive guest access</p>
+                <h2 className="mt-2 font-display text-6xl font-semibold tracking-[.04em] text-[#f7c85f] sm:text-8xl">VIP</h2>
+                <div className="mt-1 flex items-center justify-center gap-2 text-sm font-semibold uppercase tracking-[.35em] text-[#fff8e9]"><Sparkles className="h-4 w-4 text-[#f7c85f]" /> Entry approved <Sparkles className="h-4 w-4 text-[#f7c85f]" /></div>
+                <div className="mx-auto mt-8 max-w-sm border-y border-[#e5a82d]/25 py-5">
+                  <div className="font-display text-3xl font-semibold">{result.attendee.name}</div>
+                  <div className="mt-2 font-mono text-[10px] uppercase tracking-[.2em] text-[#e8b84a]">{result.attendee.ticketType} · cleared at the entrance</div>
+                  {result.attendee.email && <div className="mt-2 text-xs text-[#fff8e9]/60">{result.attendee.email}</div>}
+                </div>
+                <div className="mt-8 inline-flex items-center gap-2 rounded-full border border-[#e5a82d]/40 bg-[#e5a82d]/10 px-4 py-2 font-mono text-[10px] uppercase tracking-[.18em] text-[#f7c85f]"><CheckCircle2 className="h-4 w-4" /> Welcome to Aurea</div>
+                <button onClick={resetScan} className="mt-9 block w-full rounded-xl bg-[#e5a82d] px-8 py-4 text-sm font-extrabold uppercase tracking-[.16em] text-[#2d1b10] transition hover:bg-[#f7c85f] active:scale-[.98]" data-testid="button-scan-next">Scan Next</button>
+              </div>
+            </div>
+          ) : (
+            <div className="scan-result-card rounded-[2rem] p-7 text-center text-[#fff8e9] sm:p-10" data-testid={`scan-result-${isValid ? 'standard' : isDuplicate ? 'duplicate' : 'invalid'}`}>
+              <div className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full ${isValid ? 'bg-[#e5a82d]/15 text-[#f7c85f]' : isDuplicate ? 'bg-[#dca04b]/15 text-[#e9b96d]' : 'bg-red-400/10 text-red-300'}`}>
+                {isValid ? <CheckCircle2 className="h-11 w-11" /> : isDuplicate ? <AlertCircle className="h-11 w-11" /> : <XCircle className="h-11 w-11" />}
+              </div>
+              <p className={`mt-6 font-mono text-[10px] uppercase tracking-[.3em] ${isValid ? 'text-[#e8b84a]' : isDuplicate ? 'text-[#e9b96d]' : 'text-red-300'}`}>
+                {isValid ? 'Entry approved' : isDuplicate ? 'Already checked in' : 'Not found'}
+              </p>
+              <h2 className={`mt-3 font-display text-6xl font-semibold tracking-[.02em] ${isValid ? 'text-[#f7c85f]' : isDuplicate ? 'text-[#e9b96d]' : 'text-red-300'}`}>
+                {isValid ? 'WELCOME' : isDuplicate ? 'ALREADY IN' : 'INVALID'}
+              </h2>
+              {result.attendee ? (
+                <div className="mt-7 border-y border-[#e5a82d]/20 py-5">
+                  <div className="text-2xl font-semibold">{result.attendee.name}</div>
+                  <div className="mt-2 font-mono text-xs uppercase tracking-[.14em] text-[#e8b84a]">{result.attendee.ticketType}</div>
+                  {result.attendee.email && <div className="mt-2 text-xs text-[#fff8e9]/55">{result.attendee.email}</div>}
+                </div>
+              ) : <p className="mt-6 text-sm text-red-200/80">{result.message}</p>}
+              <button onClick={resetScan} className={`mt-9 w-full rounded-xl px-8 py-4 text-sm font-extrabold uppercase tracking-[.16em] transition active:scale-[.98] ${isValid ? 'bg-[#e5a82d] text-[#2d1b10] hover:bg-[#f7c85f]' : isDuplicate ? 'bg-[#c78a3f] text-[#2d1b10] hover:bg-[#e9b96d]' : 'bg-red-500/90 text-white hover:bg-red-400'}`} data-testid="button-scan-next">Scan Next</button>
             </div>
           )}
-          {!result.attendee && <p className={`mt-6 text-sm ${isValid ? 'text-fuchsia-400' : isDuplicate ? 'text-amber-400' : 'text-red-400'}`}>{result.message}</p>}
-
-          {/* Scan Next button */}
-          <button
-            onClick={resetScan}
-            className={`mt-12 rounded-2xl px-12 py-5 text-xl font-black tracking-tight transition active:scale-95 ${isValid ? 'bg-fuchsia-500 text-white hover:bg-fuchsia-400' : isDuplicate ? 'bg-amber-500 text-white hover:bg-amber-400' : 'bg-red-500 text-white hover:bg-red-400'}`}
-            data-testid="button-scan-next"
-          >
-            Scan Next →
-          </button>
         </div>
       )}
 
@@ -319,24 +331,24 @@ function makeCsv(text: string) {
   try {
     const lines = text.trim().split(/\r?\n/).filter(line => line.trim());
     if (lines.length < 2) return [];
-    
+
     let delimiter = ',';
     if (!lines[0].includes(',') && lines[0].includes(';')) {
       delimiter = ';';
     }
-    
+
     const header = lines.shift()!;
     const keys = header.split(delimiter).map((x) => x.trim().replace(/^"|"$/g, '').toLowerCase());
-    
+
     return lines.map((line) => {
       const values = line.split(delimiter).map((x) => x.trim().replace(/^"|"$/g, ''));
       const row = Object.fromEntries(keys.map((key, index) => [key, values[index] || '']));
-      return { 
-        name: row.name, 
-        email: row.email || undefined, 
+      return {
+        name: row.name,
+        email: row.email || undefined,
         ticketType: row.tickettype || row['ticket type'] || row.ticket_type || 'General',
         qrId: row.qrid || row['qr id'] || row.qr_id || undefined
-      }; 
+      };
     }).filter((row) => row.name);
   } catch (err) {
     return [];
@@ -386,12 +398,12 @@ function QrGenerator() {
     </div>
     <div className="relative mb-6"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, email, or QR ID" className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none focus:border-primary" /></div>
     {attendeesQuery.isLoading ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-52 animate-pulse rounded-2xl bg-muted" />)}</div>
-    : attendees.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">{attendees.map((a) => <div key={a.id} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 text-center transition hover:border-primary hover:shadow-md">
+      : attendees.length ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">{attendees.map((a) => <div key={a.id} className="group flex flex-col items-center gap-2 rounded-2xl border border-border bg-card p-4 text-center transition hover:border-primary hover:shadow-md">
         <QrImage qrId={a.qrId} />
         <div className="w-full min-w-0 flex-1"><div className="truncate text-sm font-bold">{a.name}</div><div className="font-mono text-[10px] text-muted-foreground">{a.qrId}</div><div className="mt-1 truncate text-[10px] text-muted-foreground">{a.ticketType}</div></div>
         <button onClick={() => downloadQr(a.qrId, a.name)} className="flex w-full items-center justify-center gap-1.5 rounded-lg bg-muted py-2 text-xs font-bold transition hover:bg-primary hover:text-primary-foreground"><Download className="h-3 w-3" /> Download</button>
       </div>)}</div>
-    : <div className="py-20 text-center"><QrCode className="mx-auto mb-4 h-12 w-12 text-muted-foreground/30" /><h2 className="font-display text-2xl font-bold">No attendees found.</h2><p className="mt-2 text-sm text-muted-foreground">Import a CSV from the Attendees page first.</p><Link href="/attendees" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground">Go to Attendees <ArrowRight className="h-4 w-4" /></Link></div>}
+        : <div className="py-20 text-center"><QrCode className="mx-auto mb-4 h-12 w-12 text-muted-foreground/30" /><h2 className="font-display text-2xl font-bold">No attendees found.</h2><p className="mt-2 text-sm text-muted-foreground">Import a CSV from the Attendees page first.</p><Link href="/attendees" className="mt-5 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground">Go to Attendees <ArrowRight className="h-4 w-4" /></Link></div>}
   </main>;
 }
 
@@ -483,18 +495,18 @@ function InvitationGenerator() {
 }
 
 function Attendees() {
-  const [q, setQ] = useState(''); const [status, setStatus] = useState<'all' | 'checked-in' | 'pending'>('all'); 
-  const [importOpen, setImportOpen] = useState(false); const [importResult, setImportResult] = useState<any>(null); 
+  const [q, setQ] = useState(''); const [status, setStatus] = useState<'all' | 'checked-in' | 'pending'>('all');
+  const [importOpen, setImportOpen] = useState(false); const [importResult, setImportResult] = useState<any>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [createData, setCreateData] = useState({ name: '', email: '', ticketType: 'General' });
   const fileRef = useRef<HTMLInputElement>(null);
-  
+
   const params = useMemo(() => ({ q: q || undefined, status: status === 'all' ? undefined : status }), [q, status]);
-  const attendeesQuery = useListAttendees(params, { query: { queryKey: getListAttendeesQueryKey(params) } }); 
+  const attendeesQuery = useListAttendees(params, { query: { queryKey: getListAttendeesQueryKey(params) } });
   const importAttendees = useImportAttendees();
   const createAttendee = useCreateAttendee();
   const attendees = attendeesQuery.data || [];
-  
+
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
     createAttendee.mutate({ data: createData }, {
@@ -506,27 +518,27 @@ function Attendees() {
     });
   };
 
-  const importFile = (file?: File) => { 
-    if (!file) return; 
-    const reader = new FileReader(); 
-    reader.onload = () => { 
-      const attendeesToImport = makeCsv(String(reader.result)); 
+  const importFile = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const attendeesToImport = makeCsv(String(reader.result));
       if (attendeesToImport.length) {
-        importAttendees.mutate({ data: { attendees: attendeesToImport } }, { 
-          onSuccess: (result) => { 
-            setImportResult(result); 
-            setImportOpen(false); 
-            queryClient.invalidateQueries({ queryKey: getListAttendeesQueryKey() }); 
+        importAttendees.mutate({ data: { attendees: attendeesToImport } }, {
+          onSuccess: (result) => {
+            setImportResult(result);
+            setImportOpen(false);
+            queryClient.invalidateQueries({ queryKey: getListAttendeesQueryKey() });
           },
           onError: () => alert("Failed to import attendees. Please check the file format.")
-        }); 
+        });
       } else {
         alert("No valid rows found in the CSV. Make sure it has 'name' and 'ticketType' columns.");
       }
-    }; 
-    reader.readAsText(file); 
+    };
+    reader.readAsText(file);
   };
-  
+
   return <main className="mx-auto max-w-6xl p-5 pb-12 sm:p-8 lg:p-12">
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div>
