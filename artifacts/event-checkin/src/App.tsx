@@ -5,7 +5,7 @@ import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter
 import { getGetCurrentUserQueryKey, getGetDashboardSummaryQueryKey, getListAttendeesQueryKey, useCheckIn, useGetCurrentUser, useGetDashboardSummary, useImportAttendees, useCreateAttendee, useListAttendees, useLogin, useLogout, useGenerateInvitations } from '@workspace/api-client-react';
 import { AlertCircle, ArrowRight, BarChart3, Check, CheckCircle2, ChevronRight, ClipboardList, Crown, Download, FileUp, LogOut, Menu, QrCode, Search, Sparkles, Ticket, Users, X, XCircle } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { BarcodeFormat, BinaryBitmap, DecodeHintType, HTMLCanvasElementLuminanceSource, HybridBinarizer, MultiFormatReader } from '@zxing/library';
+import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import QRCode from 'qrcode';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -183,38 +183,17 @@ function Scanner() {
         return;
       }
 
-      // ── Path 2: ZXing manual canvas loop (iOS & other browsers) ──
-      // We drive our own RAF loop and decode each frame via BinaryBitmap
-      // so timing is consistent — same approach as the BarcodeDetector path.
+      // ── Path 2: ZXing fallback (iOS & other browsers without BarcodeDetector) ──
       const hints = new Map<DecodeHintType, any>();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
-      const reader = new MultiFormatReader();
-      reader.setHints(hints);
-      const offscreen = document.createElement('canvas');
-      let lastScan = 0;
-      const SCAN_INTERVAL_MS = 150;
-
-      const loop = () => {
+      // TRY_HARDER disabled — too CPU-heavy on iOS, causes frame drops.
+      const zxing = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 200 });
+      zxing.decodeFromVideoElement(video, (result) => {
         if (!cameraActiveRef.current) return;
-        const now = performance.now();
-        if (video.readyState >= 2 && now - lastScan >= SCAN_INTERVAL_MS) {
-          lastScan = now;
-          offscreen.width = video.videoWidth || 640;
-          offscreen.height = video.videoHeight || 480;
-          const ctx = offscreen.getContext('2d', { willReadFrequently: true });
-          if (ctx) {
-            ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height);
-            try {
-              const luminance = new HTMLCanvasElementLuminanceSource(offscreen);
-              const bitmap = new BinaryBitmap(new HybridBinarizer(luminance));
-              const result = reader.decode(bitmap);
-              if (result) submitQr(result.getText());
-            } catch { /* no QR in frame */ }
-          }
-        }
-        if (cameraActiveRef.current) cameraRafRef.current = requestAnimationFrame(loop);
-      };
-      cameraRafRef.current = requestAnimationFrame(loop);
+        if (result) submitQr(result.getText());
+      }).then((controls) => {
+        scannerControlsRef.current = controls;
+      }).catch(() => { /* ignore */ });
     } catch {
       cameraStartedRef.current = false;
       if (cameraActiveRef.current) setCameraState('denied');
