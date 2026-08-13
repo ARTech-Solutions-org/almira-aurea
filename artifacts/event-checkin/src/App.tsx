@@ -299,7 +299,6 @@ function Scanner() {
         </form>
       </section>
 
-      <div className="mt-6 flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-xs text-muted-foreground"><ClipboardList className="h-4 w-4 text-primary" /><span>Need a wider view?</span><Link href="/dashboard" className="font-bold text-foreground underline decoration-primary underline-offset-4" data-testid="link-open-live-board">Open live board <ChevronRight className="inline h-3 w-3" /></Link></div>
     </main>
   );
 }
