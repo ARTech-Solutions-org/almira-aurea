@@ -61,20 +61,19 @@ function Login() {
 function Shell({ children, user }: { children: ReactNode; user: { displayName: string; username: string } }) {
   const [, setLocation] = useLocation();
   const logout = useLogout();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const nav = [{ href: '/', label: 'Scanner', icon: QrCode }, { href: '/dashboard', label: 'Live board', icon: BarChart3 }, { href: '/attendees', label: 'Attendees', icon: Users }, { href: '/qr', label: 'QR Generator', icon: Download }, { href: '/generate', label: 'Invitations', icon: Ticket }];
   const signOut = () => logout.mutate(undefined, { onSuccess: () => { queryClient.setQueryData(getGetCurrentUserQueryKey(), undefined); setLocation('/'); } });
-  return <div className="min-h-[100dvh] bg-background md:flex">
-    <aside className={`fixed inset-y-0 left-0 z-30 flex w-72 flex-col bg-sidebar p-5 text-sidebar-foreground shadow-xl transition-transform md:static md:translate-x-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-      <div className="mb-14 flex items-center justify-between"><Logo /><button className="md:hidden" onClick={() => setMenuOpen(false)} data-testid="button-close-menu"><X className="h-5 w-5" /></button></div>
-      <div className="mb-5 px-3 font-mono text-[9px] uppercase tracking-[.2em] text-sidebar-foreground/40">Entrance operations</div>
-      <nav className="space-y-1">{nav.map(({ href, label, icon: Icon }) => <Link key={href} href={href} onClick={() => setMenuOpen(false)} data-testid={`link-${label.toLowerCase().replace(' ', '-')}`} className="group flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-sidebar-foreground/65 transition hover:bg-sidebar-accent hover:text-sidebar-foreground"><Icon className="h-[18px] w-[18px] group-hover:text-primary" />{label}{href === '/' && <span className="ml-auto h-2 w-2 rounded-full bg-primary" />}</Link>)}</nav>
-      <div className="mt-auto rounded-2xl border border-sidebar-border bg-sidebar-accent/50 p-4"><div className="mb-3 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[.15em] text-sidebar-foreground/45"><span className="h-2 w-2 rounded-full bg-accent" /> System online</div><p className="text-xs leading-5 text-sidebar-foreground/70">Keep this tab open at the door. It’s tuned for quick decisions.</p></div>
-      <div className="mt-5 flex items-center gap-3 border-t border-sidebar-border pt-5"><div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary font-bold text-sidebar-foreground">{user.displayName.slice(0, 1).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-sm font-bold">{user.displayName}</div><div className="truncate font-mono text-[10px] text-sidebar-foreground/45">@{user.username}</div></div><button onClick={signOut} title="Sign out" className="text-sidebar-foreground/50 hover:text-primary" data-testid="button-logout"><LogOut className="h-4 w-4" /></button></div>
-    </aside>
-    {menuOpen && <button aria-label="Close navigation" className="fixed inset-0 z-20 bg-sidebar/40 md:hidden" onClick={() => setMenuOpen(false)} data-testid="button-menu-overlay" />}
-    <div className="min-w-0 flex-1"><header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-border bg-background/90 px-5 backdrop-blur md:hidden"><button onClick={() => setMenuOpen(true)} data-testid="button-open-menu"><Menu className="h-5 w-5" /></button><Logo compact /><div className="h-5 w-5" /></header>{children}</div>
-  </div>;
+  
+  return (
+    <div className="min-h-[100dvh] flex flex-col">
+      <header className="flex h-16 items-center justify-between px-5 md:px-12 pt-4">
+        <Logo compact />
+        <button onClick={signOut} title="Sign out" className="flex items-center gap-2 text-xs font-bold text-muted-foreground hover:text-primary transition-colors" data-testid="button-logout">
+          <LogOut className="h-4 w-4" /> Sign out
+        </button>
+      </header>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
 }
 
 function Scanner() {
