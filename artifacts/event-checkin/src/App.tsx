@@ -183,22 +183,36 @@ function Scanner() {
         return;
       }
 
-      // ── Path 2: ZXing via @zxing/browser ──
+      // ── Path 2: ZXing with manual canvas loop (iOS & other browsers) ──
+      // decodeFromVideoElement has unpredictable internal timing; instead we
+      // drive our own requestAnimationFrame loop and decode each frame manually
+      // so the rate is identical to the BarcodeDetector path on Android.
       const hints = new Map<DecodeHintType, any>();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
-      // TRY_HARDER makes JS decoding very slow on iOS; disabled for better framerate.
+      const zxing = new BrowserMultiFormatReader(hints);
+      const offscreen = document.createElement('canvas');
+      let lastScan = 0;
+      const SCAN_INTERVAL_MS = 150;
 
-      const zxing = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 });
-      zxing.decodeFromVideoElement(video, (result, error) => {
+      const loop = () => {
         if (!cameraActiveRef.current) return;
-        if (result) {
-          submitQr(result.getText());
+        const now = performance.now();
+        if (video.readyState >= 2 && now - lastScan >= SCAN_INTERVAL_MS) {
+          lastScan = now;
+          offscreen.width = video.videoWidth || 640;
+          offscreen.height = video.videoHeight || 480;
+          const ctx = offscreen.getContext('2d', { willReadFrequently: true });
+          if (ctx) {
+            ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height);
+            try {
+              const result = zxing.decodeFromCanvas(offscreen);
+              if (result) submitQr(result.getText());
+            } catch { /* no QR in frame */ }
+          }
         }
-      }).then((controls) => {
-        scannerControlsRef.current = controls;
-      }).catch(() => {
-        /* ignore initialization errors */
-      });
+        if (cameraActiveRef.current) cameraRafRef.current = requestAnimationFrame(loop);
+      };
+      cameraRafRef.current = requestAnimationFrame(loop);
     } catch {
       cameraStartedRef.current = false;
       if (cameraActiveRef.current) setCameraState('denied');
