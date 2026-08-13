@@ -5,7 +5,7 @@ import { Link, Route, Switch, Router as WouterRouter, useLocation } from 'wouter
 import { getGetCurrentUserQueryKey, getGetDashboardSummaryQueryKey, getListAttendeesQueryKey, useCheckIn, useGetCurrentUser, useGetDashboardSummary, useImportAttendees, useCreateAttendee, useListAttendees, useLogin, useLogout, useGenerateInvitations } from '@workspace/api-client-react';
 import { AlertCircle, ArrowRight, BarChart3, Check, CheckCircle2, ChevronRight, ClipboardList, Crown, Download, FileUp, LogOut, Menu, QrCode, Search, Sparkles, Ticket, Users, X, XCircle } from 'lucide-react';
 import { BrowserMultiFormatReader } from '@zxing/browser';
-import { BarcodeFormat, DecodeHintType } from '@zxing/library';
+import { BarcodeFormat, BinaryBitmap, DecodeHintType, HTMLCanvasElementLuminanceSource, HybridBinarizer, MultiFormatReader } from '@zxing/library';
 import QRCode from 'qrcode';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
@@ -183,13 +183,13 @@ function Scanner() {
         return;
       }
 
-      // ── Path 2: ZXing with manual canvas loop (iOS & other browsers) ──
-      // decodeFromVideoElement has unpredictable internal timing; instead we
-      // drive our own requestAnimationFrame loop and decode each frame manually
-      // so the rate is identical to the BarcodeDetector path on Android.
+      // ── Path 2: ZXing manual canvas loop (iOS & other browsers) ──
+      // We drive our own RAF loop and decode each frame via BinaryBitmap
+      // so timing is consistent — same approach as the BarcodeDetector path.
       const hints = new Map<DecodeHintType, any>();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
-      const zxing = new BrowserMultiFormatReader(hints);
+      const reader = new MultiFormatReader();
+      reader.setHints(hints);
       const offscreen = document.createElement('canvas');
       let lastScan = 0;
       const SCAN_INTERVAL_MS = 150;
@@ -205,7 +205,9 @@ function Scanner() {
           if (ctx) {
             ctx.drawImage(video, 0, 0, offscreen.width, offscreen.height);
             try {
-              const result = zxing.decodeFromCanvas(offscreen);
+              const luminance = new HTMLCanvasElementLuminanceSource(offscreen);
+              const bitmap = new BinaryBitmap(new HybridBinarizer(luminance));
+              const result = reader.decode(bitmap);
               if (result) submitQr(result.getText());
             } catch { /* no QR in frame */ }
           }
