@@ -35,8 +35,8 @@ function LoadingScreen() {
 function PoweredByFooter() {
   return (
     <div className="flex flex-col items-center justify-center py-8 opacity-60 hover:opacity-100 transition-opacity">
-      <span className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground">Powered by</span>
-      <img src="/powered-by.png" alt="Powered by" className="h-8 object-contain" />
+      <span className="mb-1 font-mono text-[9px] font-bold uppercase tracking-[.15em] text-muted-foreground">Powered by</span>
+      <img src="/powered-by.png" alt="Powered by" className="h-10 object-contain" />
     </div>
   );
 }
