@@ -27,7 +27,7 @@ router.post("/invitations/generate", async (req, res): Promise<void> => {
     ...Array.from({ length: regularCount }, () => "regular" as const),
   ];
   const records = requested.map((type) => ({
-    qrId: `INV-${randomUUID()}`,
+    qrId: `INV-${randomUUID().slice(0, 8).toUpperCase()}`,
     name: `${type === "vip" ? "VIP" : "Regular"} Invitation`,
     ticketType: type === "vip" ? "VIP" : "Regular",
   }));
