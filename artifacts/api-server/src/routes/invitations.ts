@@ -98,8 +98,9 @@ router.post("/invitations/generate", async (req, res): Promise<void> => {
 
   for (const { record, index, pdf } of invitationPdfs) {
     const sequence = String(index + 1).padStart(3, "0");
+    const folder = record.ticketType === "VIP" ? "VIP" : "Regular";
     archive.append(pdf, {
-      name: `${sequence}-${record.ticketType.toLowerCase()}-${record.qrId}.pdf`,
+      name: `${folder}/${sequence}-${record.qrId}.pdf`,
     });
   }
 

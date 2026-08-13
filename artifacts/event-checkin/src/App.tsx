@@ -7,6 +7,8 @@ import { AlertCircle, ArrowRight, BarChart3, Check, CheckCircle2, ChevronRight, 
 import { BrowserMultiFormatReader } from '@zxing/browser';
 import { BarcodeFormat, DecodeHintType } from '@zxing/library';
 import QRCode from 'qrcode';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient();
@@ -353,7 +355,7 @@ function makeCsv(text: string) {
     return [];
   }
 }
-async function downloadQr(id: string, name: string) {
+async function downloadQr(id: string, name: string, returnBlob?: boolean): Promise<Blob | void> {
   const dataUrl = await QRCode.toDataURL(id, { width: 720, margin: 2, errorCorrectionLevel: 'M' });
   const image = new Image();
   image.src = dataUrl;
@@ -372,6 +374,11 @@ async function downloadQr(id: string, name: string) {
   context.fillText(name, 400, 815);
   context.font = '18px DM Mono, monospace';
   context.fillText(id, 400, 850);
+  
+  if (returnBlob) {
+    return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob as Blob), 'image/png'));
+  }
+  
   const link = document.createElement('a');
   link.href = canvas.toDataURL('image/png');
   link.download = `${name.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
@@ -386,14 +393,35 @@ function QrImage({ qrId }: { qrId: string }) {
 
 function QrGenerator() {
   const [q, setQ] = useState('');
+  const [isZipping, setIsZipping] = useState(false);
   const params = useMemo(() => ({ q: q || undefined }), [q]);
   const attendeesQuery = useListAttendees(params, { query: { queryKey: getListAttendeesQueryKey(params) } });
   const attendees = attendeesQuery.data || [];
-  const downloadAll = async () => { for (const a of attendees) { await downloadQr(a.qrId, a.name); await new Promise((r) => setTimeout(r, 350)); } };
+  
+  const downloadAll = async () => { 
+    setIsZipping(true);
+    try {
+      const zip = new JSZip();
+      for (const a of attendees) { 
+        const blob = await downloadQr(a.qrId, a.name, true) as Blob;
+        if (!blob) continue;
+        const folderName = a.ticketType === 'VIP' ? 'VIP' : 'Regular';
+        const fileName = `${a.name.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
+        zip.folder(folderName)?.file(fileName, blob);
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, 'gatepass-qrs.zip');
+    } catch (e) {
+      alert("Failed to generate ZIP");
+    } finally {
+      setIsZipping(false);
+    }
+  };
+
   return <main className="mx-auto max-w-6xl p-5 pb-12 sm:p-8 lg:p-12">
     <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
       <div><p className="mb-2 font-mono text-[10px] uppercase tracking-[.2em] text-primary">QR Codes / all guests</p><h1 className="font-display text-4xl font-bold tracking-[-.045em] sm:text-5xl">QR Generator<span className="text-primary">.</span></h1><p className="mt-2 text-sm text-muted-foreground">Preview and download QR codes for every attendee.</p></div>
-      {attendees.length > 0 && <Button onClick={downloadAll} className="bg-primary text-primary-foreground"><Download className="h-4 w-4" /> Download all ({attendees.length})</Button>}
+      {attendees.length > 0 && <Button onClick={downloadAll} disabled={isZipping} className="bg-primary text-primary-foreground"><Download className="h-4 w-4" /> {isZipping ? 'Generating ZIP...' : `Download all (${attendees.length})`}</Button>}
     </div>
     <div className="relative mb-6"><Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name, email, or QR ID" className="h-11 w-full rounded-lg border border-input bg-card pl-9 pr-3 text-sm outline-none focus:border-primary" /></div>
     {attendeesQuery.isLoading ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">{Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-52 animate-pulse rounded-2xl bg-muted" />)}</div>
