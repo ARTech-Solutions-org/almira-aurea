@@ -1,0 +1,23 @@
+My Vercel deployment is failing during pnpm run vercel-build / tsc type-checking, even though the app runs fine here in Replit dev (which uses tsx and doesn't type-check). This is a pnpm monorepo with workspace packages under artifacts/*, lib/*, lib/integrations/*, and scripts. Please fix the following root causes, in this order:
+
+1. lib/db fails to compile under strict TypeScript.
+Files lib/db/src/index.ts and lib/db/src/schema/index.ts have relative imports without file extensions (e.g. ./attendees, ./organizer-users). Check lib/db's tsconfig.json — if it sets "moduleResolution": "node16" or "nodenext" (overriding the repo's base tsconfig.base.json, which uses "bundler"), either:
+
+add explicit .js extensions to every relative import in that package, or
+change lib/db's moduleResolution to "bundler" to match the rest of the monorepo (preferred, unless there's a specific reason it needs node16/nodenext).
+
+Once fixed, confirm lib/db exports attendeesTable and organizerUsersTable from its schema and that they're re-exported from lib/db/src/index.ts — these are reported as missing by consumers in artifacts/api-server.
+
+2. Duplicate/mismatched drizzle-orm versions across the workspace.
+The build log shows two separate physical copies of drizzle-orm being installed — one directly under artifacts/api-server/node_modules, another nested under artifacts/api-server/node_modules/@workspace/db/node_modules. This causes TypeScript errors like Types have separate declarations of a private property 'shouldInlineParams'. Check every workspace package.json (especially lib/db and artifacts/api-server) and make sure drizzle-orm is declared as "drizzle-orm": "catalog:" (referencing the version pinned in pnpm-workspace.yaml's catalog: block, currently ^0.45.2), not a separately hardcoded version. Then run a clean install so pnpm can dedupe it to a single copy.
+
+3. Duplicate/mismatched express and @types/express.
+Errors like Property 'use'/'get'/'post' does not exist on type 'Express'/'IRouter' and Property 'cookie'/'clearCookie'/'status' does not exist on type 'Response' are the same duplicate-package problem as #2, but for express. Find every package.json that depends on express and @types/express, pin them to a single consistent version, and add both to the catalog: block in pnpm-workspace.yaml so all workspace packages share one copy.
+
+4. Cannot find module '@workspace/api-zod'.
+This package is referenced by artifacts/api-server but can't be resolved. Confirm the package actually exists in the repo, that its directory is covered by one of the packages: globs in pnpm-workspace.yaml (currently artifacts/*, lib/*, lib/integrations/*, scripts), and that it's listed as a dependency in artifacts/api-server/package.json as "@workspace/api-zod": "workspace:*".
+
+5. Conflicting vercel.json.
+The build log shows a warning: Due to 'builds' existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. The root vercel.json doesn't have a builds key, so there must be a second vercel.json somewhere else in the repo (check api/ and artifacts/api-server/) using the legacy builds format. Find it and either remove it or reconcile it with the root config so only one deploy config is in effect.
+
+After each fix, run pnpm install && pnpm exec tsc --noEmit across the affected packages to confirm they type-check cleanly before moving to the next item, since some of these errors are cascading from lib/db failing first.

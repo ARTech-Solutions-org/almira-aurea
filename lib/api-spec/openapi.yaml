@@ -1,0 +1,393 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Organizer authentication
+  - name: attendees
+    description: Attendee registration and lookup
+  - name: check-ins
+    description: QR check-in operations
+  - name: dashboard
+    description: Attendance summaries
+  - name: invitations
+    description: Invitation PDF generation
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in an organizer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Authenticated organizer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Sign out an organizer
+      responses:
+        "204":
+          description: Signed out
+  /auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [auth]
+      summary: Get the current organizer session
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Current organizer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUser"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /attendees:
+    get:
+      operationId: listAttendees
+      tags: [attendees]
+      summary: List and filter attendees
+      security:
+        - cookieAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [all, checked-in, pending]
+            default: all
+      responses:
+        "200":
+          description: Attendees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Attendee"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /attendees/create:
+    post:
+      operationId: createAttendee
+      tags: [attendees]
+      summary: Manually create a single attendee
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendeeInput"
+      responses:
+        "201":
+          description: Created attendee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Attendee"
+        "400":
+          description: Invalid attendee data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /attendees/import:
+    post:
+      operationId: importAttendees
+      tags: [attendees]
+      summary: Import attendees from a CSV-shaped list
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendeeImportInput"
+      responses:
+        "201":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportResult"
+        "400":
+          description: Invalid attendee data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /check-ins:
+    post:
+      operationId: checkIn
+      tags: [check-ins]
+      summary: Validate and check in one QR code
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInInput"
+      responses:
+        "200":
+          description: Check-in outcome
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CheckInResult"
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get live attendance totals and recent check-ins
+      security:
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /invitations/generate:
+    post:
+      operationId: generateInvitations
+      tags: [invitations]
+      summary: Generate VIP and Regular invitation PDFs
+      security:
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateInvitationsInput"
+      responses:
+        "200":
+          description: ZIP archive containing the generated invitation PDFs
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "400":
+          description: Invalid invitation counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: event_checkin_session
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    LoginInput:
+      type: object
+      properties:
+        username:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required: [username, password]
+    AuthUser:
+      type: object
+      properties:
+        username:
+          type: string
+        displayName:
+          type: string
+      required: [username, displayName]
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthUser"
+      required: [user]
+    Attendee:
+      type: object
+      properties:
+        id:
+          type: number
+        qrId:
+          type: string
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        ticketType:
+          type: string
+        checkedInAt:
+          type: ["string", "null"]
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, qrId, name, ticketType, checkedInAt, createdAt]
+    AttendeeImportInput:
+      type: object
+      properties:
+        attendees:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/AttendeeInput"
+      required: [attendees]
+    AttendeeInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        email:
+          type: string
+        ticketType:
+          type: string
+          minLength: 1
+        qrId:
+          type: string
+      required: [name, ticketType]
+    ImportResult:
+      type: object
+      properties:
+        imported:
+          type: number
+        skipped:
+          type: number
+        attendees:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attendee"
+      required: [imported, skipped, attendees]
+    CheckInInput:
+      type: object
+      properties:
+        qrId:
+          type: string
+          minLength: 1
+      required: [qrId]
+    CheckInResult:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [valid, duplicate, invalid]
+        message:
+          type: string
+        attendee:
+          anyOf:
+            - $ref: "#/components/schemas/Attendee"
+            - type: "null"
+      required: [status, message, attendee]
+    RecentCheckIn:
+      type: object
+      properties:
+        name:
+          type: string
+        ticketType:
+          type: string
+        checkedInAt:
+          type: string
+          format: date-time
+      required: [name, ticketType, checkedInAt]
+    DashboardSummary:
+      type: object
+      properties:
+        total:
+          type: number
+        checkedIn:
+          type: number
+        remaining:
+          type: number
+        recentCheckIns:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecentCheckIn"
+      required: [total, checkedIn, remaining, recentCheckIns]
+    GenerateInvitationsInput:
+      type: object
+      properties:
+        vipCount:
+          type: number
+          minimum: 0
+          multipleOf: 1
+        regularCount:
+          type: number
+          minimum: 0
+          multipleOf: 1
+      required: [vipCount, regularCount]
+

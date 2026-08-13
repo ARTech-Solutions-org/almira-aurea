@@ -1,0 +1,17 @@
+{
+  "name": "@workspace/scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "hello": "tsx ./src/hello.ts",
+    "generate-qrs": "tsx ./src/generate-qrs.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/qrcode": "^1.5.5",
+    "qrcode": "^1.5.4",
+    "tsx": "catalog:"
+  }
+}

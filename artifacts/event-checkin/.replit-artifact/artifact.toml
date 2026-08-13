@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Event Check-in"
+description = "A mobile-first QR event registration and check-in system for organizers. Staff can sign in, scan attendee QR codes quickly, prevent duplicate check-ins, monitor live attendance, and generate printable QR codes from attendee CSV files."
+version = "1.0.0"
+id = "artifacts/event-checkin"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22660
+
+[services.development]
+run = "pnpm --filter @workspace/event-checkin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/event-checkin", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/event-checkin/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22660"
+BASE_PATH = "/"

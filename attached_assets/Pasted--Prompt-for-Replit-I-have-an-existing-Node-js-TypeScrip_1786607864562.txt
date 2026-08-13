@@ -1,0 +1,111 @@
+# Prompt for Replit
+
+I have an existing Node.js/TypeScript project (deployed on Vercel) that already generates and scans QR codes for event check-in. I need you to add a new "Generate Invitations" page/feature to it.
+
+## What I need
+
+1. A new page (call it `/generate` or similar) with a simple form:
+   - A number input: "How many VIP invitations?"
+   - A number input: "How many Regular invitations?"
+   - A "Generate" button
+
+2. When the form is submitted, the backend should:
+   - Generate a unique QR code for each invitation requested (unique ID per QR — no name, no personal data encoded, just a unique identifier like a UUID or sequential code that the existing check-in scanner can read).
+   - Take the correct PDF template depending on type (VIP template vs Regular template — I will provide both as two separate one-page PDF files).
+   - Place the generated QR image into the fixed placeholder box on that template at these exact coordinates (bottom-left origin, in points):
+     - x: 364
+     - y: 468.9
+     - width: 180
+     - height: 180
+   - The only difference between a VIP and a Regular invitation is which template PDF is used (VIP template vs Regular template) — no name or extra text should be added to the PDF, it should look exactly like the template with just the QR filled in.
+   - Produce one output PDF per invitation, then bundle all generated PDFs into a single downloadable ZIP file.
+
+3. Store a record of each generated QR's unique ID and its type (VIP/Regular) so it can be validated/marked as used by the existing scanning logic — reuse whatever storage/DB the check-in system already uses if possible.
+
+4. Use `pdf-lib` for placing the QR onto the PDF and `qrcode` for generating the QR image. Please install these as dependencies.
+
+## Reference implementation (adapt this into the project's existing structure/conventions)
+
+```typescript
+import { PDFDocument } from "pdf-lib";
+import QRCode from "qrcode";
+import fs from "fs/promises";
+import { randomUUID } from "crypto";
+import archiver from "archiver"; // for zipping outputs
+
+const QR_BOX = {
+  x: 364,
+  y: 468.9,
+  size: 180,
+};
+
+type InviteType = "vip" | "regular";
+
+const TEMPLATE_PATHS: Record<InviteType, string> = {
+  vip: "./templates/vip-template.pdf",
+  regular: "./templates/regular-template.pdf",
+};
+
+async function generateSingleInvite(type: InviteType, outputDir: string) {
+  const id = randomUUID(); // unique identifier encoded in the QR, no personal data
+  const qrData = id; // or a URL like `https://your-checkin-domain.com/checkin/${id}`
+
+  const qrPngBuffer = await QRCode.toBuffer(qrData, {
+    type: "png",
+    margin: 0,
+    width: 600,
+  });
+
+  const templateBytes = await fs.readFile(TEMPLATE_PATHS[type]);
+  const pdfDoc = await PDFDocument.load(templateBytes);
+  const qrImage = await pdfDoc.embedPng(qrPngBuffer);
+
+  const page = pdfDoc.getPages()[0];
+  page.drawImage(qrImage, {
+    x: QR_BOX.x,
+    y: QR_BOX.y,
+    width: QR_BOX.size,
+    height: QR_BOX.size,
+  });
+
+  const finalBytes = await pdfDoc.save();
+  const outputPath = `${outputDir}/${type}-${id}.pdf`;
+  await fs.writeFile(outputPath, finalBytes);
+
+  return { id, type, outputPath };
+}
+
+async function generateBatch(vipCount: number, regularCount: number) {
+  const outputDir = `./generated/${Date.now()}`;
+  await fs.mkdir(outputDir, { recursive: true });
+
+  const records: { id: string; type: InviteType; outputPath: string }[] = [];
+
+  for (let i = 0; i < vipCount; i++) {
+    records.push(await generateSingleInvite("vip", outputDir));
+  }
+  for (let i = 0; i < regularCount; i++) {
+    records.push(await generateSingleInvite("regular", outputDir));
+  }
+
+  // TODO: save `records` (id + type) into the existing check-in database
+
+  // Zip everything for download
+  const zipPath = `${outputDir}.zip`;
+  const output = await fs.open(zipPath, "w");
+  const archive = archiver("zip", { zlib: { level: 9 } });
+  const stream = output.createWriteStream();
+  archive.pipe(stream);
+  archive.directory(outputDir, false);
+  await archive.finalize();
+
+  return zipPath;
+}
+```
+
+## Important constraints
+
+- No name, email, or any personal data should appear anywhere on the generated PDF — the invite should look identical to the template, just with the QR filled in.
+- The only visual difference between VIP and Regular is which template file is used.
+- Each QR must encode a unique ID so it can be scanned and validated by the existing check-in system without collisions.
+- Please match the existing project's code style, folder structure, and error handling conventions.

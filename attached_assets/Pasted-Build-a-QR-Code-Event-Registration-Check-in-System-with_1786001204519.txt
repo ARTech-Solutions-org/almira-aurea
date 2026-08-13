@@ -1,0 +1,50 @@
+Build a QR Code Event Registration & Check-in System with the following specifications:
+
+## Overview
+A web application for event check-in using QR code scanning, with an admin panel for organizer login and a separate script to generate QR codes for attendees.
+
+## 1. QR Code Generator Script
+- A standalone script (Python or Node.js) that generates unique QR codes for each attendee/ticket.
+- Each QR code should encode a unique ID (e.g., UUID or ticket number) tied to attendee data (name, email, ticket type, etc.) stored in a database.
+- Output QR codes as downloadable image files (PNG), ideally with the attendee's name printed below/near the QR code for easy identification.
+- Support bulk generation from a CSV file (list of attendees) so organizers can generate all codes at once.
+
+## 2. Admin Authentication
+- A login page where organizers/staff enter a username and password.
+- Secure authentication (hashed passwords, session/token-based auth).
+- After login, redirect to the scanning page.
+- Only authenticated users can access the scanner and admin dashboard.
+
+## 3. QR Code Scanning Page (Core Feature — Highest Priority)
+- After login, automatically open the device camera for scanning.
+- **Mobile-first vertical (portrait) layout**: full-screen camera view with a clearly visible square/frame overlay centered on the screen, showing the active scanning area.
+- **Performance is the top priority**:
+  - Scan detection must complete in under 1 second (max a few seconds) after the QR code appears in frame.
+  - Must reliably detect QR codes from different angles (tilted, rotated) and different distances (close-up and farther away), not just straight-on and close.
+  - Use a fast, robust QR detection library (e.g., ZXing, jsQR with optimized frame sampling, or a native scanning library) with continuous frame scanning (not single-shot).
+  - Optimize camera resolution/frame rate for the best balance between speed and detection range — prefer using a slightly wider field of view so both close and far QR codes are captured.
+- On successful scan:
+  - Instantly show clear visual + audio feedback (green flash/checkmark + beep sound) for a valid, first-time scan.
+  - Show a different feedback (red flash/error sound) if the code is invalid or already used (duplicate check-in).
+  - Display the attendee's name/info briefly on screen after a successful scan.
+  - Prevent double check-in for the same QR code (mark as "checked in" in the database with timestamp).
+  - Automatically resume scanning for the next attendee within a second or two (no manual button press needed between scans).
+
+## 4. Admin Dashboard (optional but useful)
+- View list of all attendees with check-in status (checked-in / not yet, with timestamp).
+- Search/filter attendees.
+- Manually check in an attendee if QR scan fails (backup option).
+- Show live count of total checked-in vs total registered.
+
+## Tech Requirements
+- Responsive design optimized primarily for mobile/tablet devices held vertically (portrait mode), since staff will be scanning with phones/tablets at the entrance.
+- Backend with a database (e.g., PostgreSQL/SQLite) storing attendees, QR IDs, check-in status/timestamp, and admin users.
+- Fast API responses (check-in validation should feel instant to the user).
+- Camera permission handling with clear error messages if camera access is denied.
+
+## Priority Order
+1. Scanning speed and accuracy (from any angle/distance) — most critical.
+2. Duplicate check-in prevention and clear success/error feedback.
+3. Admin login security.
+4. QR generation script for organizers.
+5. Dashboard for monitoring (nice to have).
