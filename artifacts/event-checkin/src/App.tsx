@@ -32,6 +32,15 @@ function LoadingScreen() {
   return <div className="flex min-h-[100dvh] items-center justify-center bg-background p-6"><div className="w-full max-w-sm space-y-3" data-testid="loading-session"><div className="h-10 w-40 animate-pulse rounded-lg bg-muted" /><div className="h-24 animate-pulse rounded-2xl bg-muted" /><div className="h-12 animate-pulse rounded-lg bg-muted" /></div></div>;
 }
 
+function PoweredByFooter() {
+  return (
+    <div className="flex flex-col items-center justify-center py-8 opacity-60 hover:opacity-100 transition-opacity">
+      <span className="mb-2 font-mono text-[10px] font-bold uppercase tracking-[.15em] text-muted-foreground">Powered by</span>
+      <img src="/powered-by.png" alt="Powered by" className="h-8 object-contain" />
+    </div>
+  );
+}
+
 function Login() {
   const login = useLogin();
   const [, setLocation] = useLocation();
@@ -56,6 +65,7 @@ function Login() {
           <Button type="submit" disabled={login.isPending} className="mt-3 w-full bg-primary text-primary-foreground shadow-md shadow-primary/15" data-testid="button-login">{login.isPending ? 'Opening gate…' : <>Open Gatepass <ArrowRight className="h-4 w-4" /></>}</Button>
         </form>
         <p className="mt-10 font-mono text-[10px] uppercase leading-5 tracking-[.12em] text-muted-foreground">Authorized organizers only<br />Attendance data is shared with your event team.</p>
+        <div className="mt-auto pt-10"><PoweredByFooter /></div>
       </section>
     </div>
   </main>;
@@ -75,6 +85,7 @@ function Shell({ children, user }: { children: ReactNode; user: { displayName: s
         </button>
       </header>
       <div className="min-w-0 flex-1">{children}</div>
+      <PoweredByFooter />
     </div>
   );
 }
