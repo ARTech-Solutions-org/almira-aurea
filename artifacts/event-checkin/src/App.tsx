@@ -249,7 +249,7 @@ function Scanner() {
               <p className={`mt-6 font-mono text-[10px] uppercase tracking-[.3em] ${isValid ? 'text-[#e8b84a]' : 'text-red-400'}`}>
                 {isValid ? 'Entry approved' : isDuplicate ? 'Already checked in' : 'Not found'}
               </p>
-              <h2 className={`mt-3 font-display text-6xl font-semibold tracking-[.02em] ${isValid ? 'text-[#f7c85f]' : 'text-red-500'}`}>
+              <h2 className={`mt-3 font-display text-4xl sm:text-5xl md:text-6xl font-semibold tracking-[.02em] ${isValid ? 'text-[#f7c85f]' : 'text-red-500'}`}>
                 {isValid ? 'WELCOME' : isDuplicate ? 'ALREADY IN' : 'INVALID'}
               </h2>
               {result.attendee ? (
