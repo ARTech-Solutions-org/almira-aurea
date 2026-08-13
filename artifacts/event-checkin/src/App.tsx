@@ -466,6 +466,7 @@ function InvitationGenerator() {
 
       const zip = new JSZip();
       const QR_BOX = { x: 364, y: 468.9, size: 180 };
+      const PADDING = 12; // white quiet-zone padding in PDF points
 
       await Promise.all(attendees.map(async (record, index) => {
         const templateBytes = record.ticketType === 'VIP' ? vipTemplateRes : regularTemplateRes;
@@ -473,13 +474,22 @@ function InvitationGenerator() {
         
         const qrDataUrl = await QRCode.toDataURL(record.qrId, {
           type: 'image/png',
-          margin: 0,
+          margin: 2,   // built-in quiet zone in the PNG itself
           width: 600,
           errorCorrectionLevel: 'M',
         });
         
         const qrImage = await pdf.embedPng(qrDataUrl);
         const page = pdf.getPages()[0];
+
+        // Draw white background rect (quiet zone) behind the QR
+        page.drawRectangle({
+          x: QR_BOX.x - PADDING,
+          y: QR_BOX.y - PADDING,
+          width: QR_BOX.size + PADDING * 2,
+          height: QR_BOX.size + PADDING * 2,
+          color: { type: 'RGB' as any, red: 1, green: 1, blue: 1 },
+        });
 
         page.drawImage(qrImage, {
           x: QR_BOX.x,
